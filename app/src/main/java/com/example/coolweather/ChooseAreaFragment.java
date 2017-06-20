@@ -11,6 +11,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.coolweather.db.City;
 import com.example.coolweather.db.County;
@@ -110,11 +111,11 @@ public class ChooseAreaFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent,View view, int position, long id){
                 if(currentLevel == LEVEL_PROVINCE){
                     selectedProvince = mProvinceList.get(position);
+                    queryCities();
 
                 }else if(currentLevel == LEVEL_CITY){
                     selectedCity = mCityList.get(position);
-
-
+                    queryCities();
                 }
             }
         });
@@ -122,12 +123,14 @@ public class ChooseAreaFragment extends Fragment {
         mBackButton.setOnClickListener(new View.OnClickListener(){
             public void onClick(View v){
                 if(currentLevel == LECEL_COUNTY){
+                    queryCities();
 
                 }else if(currentLevel == LEVEL_CITY){
-
+                    queryProvinces();
                 }
             }
         });
+        queryProvinces();
 
 
     }
@@ -175,6 +178,28 @@ public class ChooseAreaFragment extends Fragment {
     }
 
 
+    private void queryCounties(){
+        mTitleText.setText(selectedCity.getCityName());
+        mBackButton.setVisibility(View.VISIBLE);
+        mCountyList = DataSupport.where("cityid = ?",String.valueOf(selectedCity.getId())).find(County.class);
+        if(mCountyList.size() > 0){
+            dataList.clear();
+            for(County county : mCountyList){
+                dataList.add(county.getCountyName());
+            }
+            mAdapter.notifyDataSetChanged();
+            mListView.setSelection(0);
+            currentLevel = LECEL_COUNTY;
+        }else{
+            int provinceCode = selectedProvince.getProvinceCode();
+            int cityCode = selectedCity.getCityCode();
+
+            String address = "http://guolin.tech/api/china/"+provinceCode+"/"+cityCode;
+            queryFromServer(address,"country");
+        }
+    }
+
+
 
 
     private void queryFromServer(String address,final String type){
@@ -182,6 +207,13 @@ public class ChooseAreaFragment extends Fragment {
         HttpUtil.sendOkHttpRequest(address, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getContext(),"加载失败",Toast.LENGTH_SHORT).show();
+                    }
+                });
 
             }
 
